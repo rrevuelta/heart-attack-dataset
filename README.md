@@ -4,7 +4,7 @@
 
 David Esparcia Cobo desparcia@uoc.edu
 
-Rubén Revuelta rrevueltab@uoc.edu
+Rubén Revuelta Briz rrevueltab@uoc.edu
 
 ## Propósito
 
