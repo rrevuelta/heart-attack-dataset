@@ -1,0 +1,116 @@
+---
+title: 'Práctica 2: ¿Cómo realizar la limpieza y análisis de los datos?'
+author: "David Esparcia y Rubén Revuelta"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+  html_document:
+    toc: yes
+    number_sections: yes
+    toc_depth: 2
+  word_document:
+    toc: yes
+    toc_depth: '2'
+---
+
+```{r}
+library(dplyr)
+```
+
+# Descripción del dataset
+
+En primer lugar se procede a la carga del conjunto de datos por medio del fichero "**heart.csv**" alojado en el directorio de trabajo
+
+```{r}
+data<-read.csv("./data/heart.csv",header=T,sep=",")
+```
+
+A continuación obtenemos la geometría del *dataset*.
+
+```{r}
+dim(data)
+```
+
+Como se puede observar, el conjunto dispone de un total de 303 registros y 14 atributos.
+
+```{r}
+str(data)
+```
+
+En total se dispone de **5 varaibles continuas** y **9 variables categóricas**:
+
+-   **Variables continuas**: age, trtbps, chol, thalachh, oldpeak
+
+-   **Variables categóricas**: sex, cp, fbs, restecg, exng, slp, caa, thall, output
+
+# Limpieza de los datos
+
+### Detección y gestión de valores nulos, vacíos y repetidos
+
+La primera acción de limpieza de datos que se lleva a cabo es la detección de valores nulos o vacíos en el conjunto de datos. Comenzamos buscando por valores nulos.
+
+```{r}
+#Existencia de registros con valores nulos en alguno de sus atributos
+colSums(is.na(data))
+```
+
+Tras observar que el conjunto de datos no dispone de valores nulos, buscamos registros cuyos atributos contengan valores vacíos.
+
+```{r}
+#Existencia de registros con valores vacíos en alguno de sus atributos
+colSums(data=="")
+```
+
+De igual forma, no se encuentran registros que presenten este tipo de valores. En tercer lugar, se realiza una búsqueda de posibles registros duplicados.
+
+```{r}
+duplicated(data)
+```
+
+Esta vez, la prueba realizada nos indica que si existe un valor duplicado. Para eliminar el valor duplicado utilizamos la función *distinct()* de la librería *dplyr*.
+
+```{r}
+data <- data %>% distinct()
+dim(data)
+```
+
+### Detección y gestión de *outliers*
+
+Una primera aproximación para la detección de outliers en nuestras variables contínuas la podemos realizar aplicando la función *summary*() a nuestro conjunto de datos.
+
+```{r}
+variables_continuas <- data[,c("age","trtbps","chol","thalachh","oldpeak")]
+summary(variables_continuas)
+```
+
+Sin embargo, la forma más eficiente de detectar posibles outliers en nuestras variables continuas es a través de *box-plots*.
+
+```{r}
+par(mfrow=c(2,3))
+for(i in 1:ncol(variables_continuas)) {
+  boxplot(variables_continuas[,i], main = colnames(variables_continuas)[i], width = 100)
+}
+```
+
+A través de los diagramas de cajas observamos ciertos candidatos a *outliers* en algunas de las variables como pueden ser *chol* o *trtbps*. Sin embargo, analizando la naturalidad de las mismas y entendiendo el problema e información que representan, se determina que se tratan de valores que pueden ser perfectamenta válidos. Por ejemplo, un colesterol mayor de 500 se considera valores altos de colesterol.
+
+Apoyando este análisis, a través de la comparación con la media, ninguno de los posibles *outliers* llegaría si quiera a ser *fringelie* al no superar 3 veces la desviación estándar de la media.
+
+Por otro lado, la detección de valores anómalos en las variables categóricas la podemos llevar a cabo a través de su representación por medio de histogramas.
+
+```{r}
+variables_categoricas <- data[, c("sex", "cp", "fbs", "restecg", "exng", "slp", "caa", "thall", "output")]
+
+par(mfrow=c(3,3))
+for(i in 1:ncol(variables_categoricas)) {
+  counts <- table(variables_categoricas[,i])
+  barplot(prop.table(counts),col=c("green","red"), ,xlab =colnames(variables_categoricas)[i], ylab = "Porcentaje",ylim=c(0,0.8))
+}
+```
+
+Como observamos, tras comprobar todos los histogramas, todas las variables categóricas toman valores dentro del rango para el cual se encuentran definidas.
+
+# 
+
+Análisis de los datos
