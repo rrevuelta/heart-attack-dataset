@@ -23,7 +23,7 @@ library(dplyr)
 En primer lugar se procede a la carga del conjunto de datos por medio del fichero "**heart.csv**" alojado en el directorio de trabajo
 
 ```{r}
-data<-read.csv("./data/heart.csv",header=T,sep=",")
+data<-read.csv("./heart-attack-dataset/data/heart.csv",header=T,sep=",")
 ```
 
 A continuación obtenemos la geometría del *dataset*.
@@ -111,6 +111,119 @@ for(i in 1:ncol(variables_categoricas)) {
 
 Como observamos, tras comprobar todos los histogramas, todas las variables categóricas toman valores dentro del rango para el cual se encuentran definidas.
 
-# 
+# Análisis de los datos
 
-Análisis de los datos
+Como anteriormente hemos visto una visión general del dataset con las funciones summary y str, en este apartado nos centraremos en un análisis inferencial mediante la comprobación de grupos y de la normalidad utilizado diferentes pruebas y métodos analíticos. 
+
+### Selección de grupos a analizar y comparar
+
+Primeramente daremos detalles de todas las variables incluidas en el dataset:
+*age* : edad 
+*sex* : sexo(0=mujer, 1=hombre)
+*cp* : tipo de dolor de pecho (0=asintomatico, 1=angina típica, 2=angina atípica, 3=dolor no anginoso)
+*trestbps* : presión sanguínea en reposo (medida en mm al entrar al hospital)
+*chol* : colesterol en mg/dl
+*fbs* : glucemia en ayunas (0=falso, 1=verdadero)
+*restecg* : resultados electrocardiográficos en reposo (0=hipertrofia, 1=normal, 2=anormalidad de onda ST-T)
+*thalach* : frecuencia cardíaca máxima alcanzada
+*exang* : angina inducida por el ejercicio (0=No, 1=Si)
+*oldpeak* : alteración del segmento ST inducida por el ejercicio
+*slp* : pendiente del segmento ST durante el ejercicio máximo (0=pendiente descendente, 1=plano, 2=pendiente ascendente)
+*caa* : número de vasos sanguíneos principales (0-3) coloreados por fluoroscopia
+*thall* : tipo de corazón (1=defecto arreglado, 2=normal, 3=defecto reversible)
+*output* : resultado de enfermedad cardíaca predicho (0=sin o pequeño estrechamiento del diámetro, 1= >=50% de estrechamiento del diámetro)
+
+A continuación seleccionamos diferentes grupos a analizar y comparar, aplicando diferentes test en función del tipo de variable a tratar.
+
+### Comprobación de la normalidad y homogeneidad de la varianza
+
+Primero comprobamos la normalidad de las variables continuas mediante el test de Shapiro-Wilk y un gráfico QQ plot, para ver visualmente si los resultados del test nos cuadran con la distribución que sigue cada variable.
+```{r ,eval=TRUE,echo=TRUE}
+qqnorm(variables_continuas$age, main='age')
+qqline(variables_continuas$age, col="red")
+shapiro.test(variables_continuas$age)
+```
+```{r ,eval=TRUE,echo=TRUE}
+qqnorm(variables_continuas$trtbps, main='trtbps')
+qqline(variables_continuas$trtbps, col="red")
+shapiro.test(variables_continuas$trtbps)
+```
+```{r ,eval=TRUE,echo=TRUE}
+qqnorm(variables_continuas$chol, main='chol')
+qqline(variables_continuas$chol, col="red")
+shapiro.test(variables_continuas$chol)
+```
+```{r ,eval=TRUE,echo=TRUE}
+qqnorm(variables_continuas$thalachh, main='thalachh')
+qqline(variables_continuas$thalachh, col="red")
+shapiro.test(variables_continuas$thalachh)
+```
+```{r ,eval=TRUE,echo=TRUE}
+qqnorm(variables_continuas$oldpeak, main='oldpeak')
+qqline(variables_continuas$oldpeak, col="red")
+shapiro.test(variables_continuas$oldpeak)
+```
+Vemos que en todos los casos se rechaza la hipótesis nula de normalidad en la distribución, ya que todos los p-value son menores al nivel de significancia asumido (α=0,05).
+Seria posible normalizar todos los datos, sin embargo creo que es interesante tener una visión real de algunas variables como el colesterol o la edad. Teniendo en cuenta que el número de observaciones es mayor a 30 y que en la mayoria de gráficos QQ plot tampoco vemos una gran desviación, podriamos asumir que la distribución es normal tal y como dice el teorema central del límite.
+
+A continuación vamos a estudiar la homogeneidad de las varianzas para las variables *chol* y *cp*, que corresponden al colesterol y al tipo de dolor en el pecho, utilizando un test de Fligner-Killeen con una hipótesis nula en la cual ambas varianzas son iguales. 
+```{r, eval=TRUE, echo=TRUE}
+fligner.test(output ~ chol, data = data)
+```
+```{r, eval=TRUE, echo=TRUE}
+fligner.test(output ~ cp, data = data)
+```
+En ninguno de los dos casos se rechaza la hipótesis nula ya que el p-valor es superior a 0.05, por lo que podemos decir que las varianzas son homogéneas.
+
+### Aplicación de pruebas estadísticas para comparar los grupos de datos
+
+Teniendo en cuenta que el objetivo del estudio es verificar que variables tienen más influencia a la hora de provocar un ataque al corazón, vamos a realizar diferentes pruebas estadísticas que nos permitan sacar conclusiones del dataset.
+
+La primera prueba que vamos a aplicar es el test chi2 para ver si existen diferencias significativas a la hora de tener un ataque al corazón entre hombres y mujeres. Este tipo de test es útil para comprobar si hay diferencias significativas entre variables categóricas.
+```{r, eval=TRUE, echo=TRUE}
+sex.result = table(data$output, data$sex)
+colnames(sex.result) <- c('Mujer', 'Hombre')
+rownames(sex.result) <- c('No', 'Si')
+sex.result
+chisq.test(sex.result)
+
+```
+El p-value es menor a 0.05 y por tanto podemos decir que existen diferencias significativas entre hombres y mujeres.
+
+Seguidamente vamos a ver las correlaciones entre las diversas variables para poder identificar cuales pueden estar más correlacionadas con el hecho de padecer un ataque al corazón. Como anteriormente hemos visto que los datos en general no seguian una distribución normal, aplicamos el test de Spearman para calcular las correlaciones entre pares de variables.
+
+```{r, eval=TRUE, echo=TRUE}
+# Primero vemos una representación gráfica de las correlaciones
+library(corrplot)
+corr.resultados <- cor(data, method='spearman')
+corrplot(corr.resultados,method='circle')
+```
+Podemos ver que las variables más correlacionadas con sufrir un ataque al corazón (output) son:
+*cp*(tipo de dolor de pecho)
+*thalachh*(frecuencia cardíaca máxima)
+*slp*(pendiente del segmento ST)
+*exng*(angina inducida por ejercicio)
+*oldpeak* (alteración del segmento ST)
+*caa* (número de vasos principales)
+
+Teniendo esto en cuenta, la última prueba estadística a realizar va a ser un modelo de regresión logística ya que estamos tratando de explicar las variables que más afectan al resultado de una variable categórica (*output*).
+
+Para empezar en el modelo hemos incluido las variables con más correlación y podemos ver que todas son estadísticamente significativas, ya que el PR(>|z1) es más pequeño que 0.05.
+
+```{r, eval=TRUE, echo=TRUE}
+m1 = glm(formula = output~sex+cp+thalachh+exng+oldpeak+caa+thall, family='binomial', data=data)
+summary(m1)
+```
+Para comprobar como de bueno es el ajuste del modelo, tenemos que fijarnos en el coeficiente de Akaike (AIC). CUanto menor sea el valor mejor será el modelo. 
+
+Para verificar que estamos incluyendo las variables adecuadas, vamos a probar a añadir alguna variable más y ver como se comporta el nuevo modelo.
+```{r, eval=TRUE, echo=TRUE}
+m2 = glm(formula = output~age+sex+cp+thalachh+exng+oldpeak+slp+caa+thall, family='binomial', data=data)
+summary(m2)
+```
+Vemos que pese a no haber mucha diferencia en el valor de AIC, en este modelo hay variables que no son estadísticamente significativas por lo que no nos servirian para explicar la variable dependiente.
+
+
+
+
+
