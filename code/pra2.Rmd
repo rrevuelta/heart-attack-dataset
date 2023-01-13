@@ -23,7 +23,7 @@ library(dplyr)
 En primer lugar se procede a la carga del conjunto de datos por medio del fichero "**heart.csv**" alojado en el directorio de trabajo
 
 ```{r}
-data<-read.csv("./heart-attack-dataset/data/heart.csv",header=T,sep=",")
+data<-read.csv("./../data/heart.csv",header=T,sep=",")
 ```
 
 A continuación obtenemos la geometría del *dataset*.
